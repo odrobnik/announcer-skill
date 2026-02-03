@@ -9,7 +9,7 @@ metadata:
     "openclaw":
       {
         "emoji": "📢",
-        "requires": { "bins": ["python3", "ffmpeg"], "apps": ["Airfoil"] },
+        "requires": { "bins": ["python3", "ffmpeg"], "apps": ["Airfoil"], "env": ["ELEVENLABS_API_KEY"], "skills": ["elevenlabs"] },
       },
   }
 ---
