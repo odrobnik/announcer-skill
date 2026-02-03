@@ -28,6 +28,7 @@ python3 skills/announcer/scripts/announce.py speakers
 
 See [SKILL.md](SKILL.md) for full documentation, configuration, and usage details.
 
-## Homepage
+## Links
 
-https://github.com/odrobnik/announcer-skill
+- **GitHub**: https://github.com/odrobnik/announcer-skill
+- **ClawHub**: https://www.clawhub.com/skills/announcer
