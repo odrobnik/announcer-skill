@@ -6,7 +6,7 @@ An [OpenClaw](https://openclaw.ai) skill.
 
 Works with any AirPlay speakers, including HomePods, Apple TVs, and third-party AirPlay receivers.
 
-![Airfoil connected to AirPlay speakers](assets/airfoil-speakers.jpg)
+![Airfoil connected to AirPlay speakers](assets/airfoil-speakers.png)
 
 ## How It Works
 
