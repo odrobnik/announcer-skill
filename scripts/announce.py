@@ -178,65 +178,145 @@ def disconnect_all():
     subprocess.run(["osascript", "-e", script], capture_output=True)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Announce text via AirPlay speakers")
-    parser.add_argument("text", help="Text to announce")
-    parser.add_argument("--speakers", help="Comma-separated speaker names (default: all configured)")
-    parser.add_argument("--keep-connected", action="store_true", help="Don't disconnect after announcement")
-    parser.add_argument("--no-gong", action="store_true", help="Skip the announcement gong")
-    args = parser.parse_args()
+def list_speakers(as_json: bool = False):
+    """List all speakers visible to Airfoil with connection status."""
+    script = '''
+    tell application "Airfoil"
+        set speakerList to {}
+        repeat with s in (every speaker)
+            set end of speakerList to (name of s) & "|" & (connected of s as text)
+        end repeat
+        return speakerList
+    end tell
+    '''
+    result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, timeout=10)
+    if result.returncode != 0:
+        print("Error: Could not query Airfoil. Is it running?", file=sys.stderr)
+        sys.exit(1)
 
     config = load_config()
-    
-    # Determine speakers
+    configured = set(config.get("speakers", []))
+    excluded = set(config.get("excluded", []))
+
+    speakers = []
+    for entry in result.stdout.strip().split(", "):
+        if "|" not in entry:
+            continue
+        name, connected = entry.rsplit("|", 1)
+        speakers.append({
+            "name": name,
+            "connected": connected.lower() == "true",
+            "configured": name in configured,
+            "excluded": name in excluded,
+        })
+
+    speakers.sort(key=lambda s: (not s["configured"], s["excluded"], s["name"]))
+
+    if as_json:
+        json.dump(speakers, sys.stdout, indent=2)
+        print()
+    else:
+        for s in speakers:
+            status = "🟢" if s["connected"] else "⚪"
+            tag = ""
+            if s["configured"]:
+                tag = " [configured]"
+            elif s["excluded"]:
+                tag = " [excluded]"
+            print(f"  {status} {s['name']}{tag}")
+        print(f"\n{len(speakers)} speakers found, {sum(1 for s in speakers if s['configured'])} configured")
+
+
+def cmd_say(args):
+    """Handle the 'say' subcommand."""
+    config = load_config()
+
     if args.speakers:
         speakers = [s.strip() for s in args.speakers.split(",")]
     else:
         speakers = config["speakers"]
-    
-    # Use config voice_id, or fall back to Daniel (original voice)
+
     voice_id = config["elevenlabs"].get("voice_id", "onwK4e9ZLuTAKqWW03F9")
     fmt = config["elevenlabs"].get("format", "opus_48000_192")
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         opus_path = os.path.join(tmpdir, "tts.opus")
         mp3_path = os.path.join(tmpdir, "tts.mp3")
-        
-        print(f"Generating TTS...", file=sys.stderr)
+
+        print("Generating TTS...", file=sys.stderr)
         if not generate_tts(args.text, opus_path, voice_id, fmt):
             sys.exit(1)
-        
-        print(f"Converting to stereo MP3...", file=sys.stderr)
+
+        print("Converting to stereo MP3...", file=sys.stderr)
         if not convert_to_stereo_mp3(opus_path, mp3_path):
             print("Conversion failed", file=sys.stderr)
             sys.exit(1)
-        
+
         print(f"Setting up Airfoil ({len(speakers)} speakers)...", file=sys.stderr)
         volume = config["airfoil"].get("volume", 0.7)
         if not setup_airfoil(speakers, volume):
             print("Airfoil setup failed", file=sys.stderr)
             sys.exit(1)
-        
-        # Wait for all speakers to connect
-        print(f"Waiting for connections...", file=sys.stderr)
+
+        print("Waiting for connections...", file=sys.stderr)
         if not wait_for_connections(speakers):
             print("Warning: Not all speakers connected in time", file=sys.stderr)
-        
-        # Play gong before announcement
+
         if GONG_PATH.exists() and not args.no_gong:
-            print(f"Playing gong...", file=sys.stderr)
+            print("Playing gong...", file=sys.stderr)
             play_audio(str(GONG_PATH))
-            time.sleep(0.3)  # Brief pause between gong and message
-        
-        print(f"Playing announcement...", file=sys.stderr)
+            time.sleep(0.3)
+
+        print("Playing announcement...", file=sys.stderr)
         play_audio(mp3_path)
-        
+
         if not args.keep_connected:
-            # Wait for AirPlay buffer to flush before disconnecting
             time.sleep(3)
             disconnect_all()
-    
+
     print("Done!", file=sys.stderr)
+
+
+def cmd_speakers(args):
+    """Handle the 'speakers' subcommand."""
+    list_speakers(as_json=args.json)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Announce text via AirPlay speakers")
+    sub = parser.add_subparsers(dest="command")
+
+    # 'speakers' subcommand
+    sp_list = sub.add_parser("speakers", help="List all Airfoil speakers")
+    sp_list.add_argument("--json", action="store_true", help="Output as JSON")
+
+    # 'say' subcommand
+    sp_say = sub.add_parser("say", help="Announce text")
+    sp_say.add_argument("text", help="Text to announce")
+    sp_say.add_argument("--speakers", help="Comma-separated speaker names (default: all configured)")
+    sp_say.add_argument("--keep-connected", action="store_true", help="Don't disconnect after announcement")
+    sp_say.add_argument("--no-gong", action="store_true", help="Skip the announcement gong")
+
+    args = parser.parse_args()
+
+    # Backward compat: no subcommand = legacy positional text
+    if args.command is None:
+        # Check if there's a positional arg that looks like text
+        if len(sys.argv) > 1 and sys.argv[1] not in ("speakers", "say", "-h", "--help"):
+            # Legacy mode: treat first arg as text
+            args.command = "say"
+            args.text = " ".join(sys.argv[1:])
+            args.speakers = None
+            args.keep_connected = False
+            args.no_gong = False
+        else:
+            parser.print_help()
+            sys.exit(1)
+
+    if args.command == "speakers":
+        cmd_speakers(args)
+    elif args.command == "say":
+        cmd_say(args)
 
 
 if __name__ == "__main__":
