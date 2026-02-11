@@ -16,6 +16,12 @@ def _find_workspace_root() -> Path:
     env = os.environ.get("ANNOUNCER_WORKSPACE")
     if env:
         return Path(env)
+    
+    # Prefer CWD if it looks like a workspace (handles symlinks correctly)
+    cwd = Path.cwd()
+    if (cwd / "skills").is_dir():
+        return cwd
+
     d = Path(__file__).resolve().parent
     for _ in range(6):
         if (d / "skills").is_dir() and d != d.parent:
