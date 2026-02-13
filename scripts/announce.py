@@ -11,6 +11,19 @@ import time
 from pathlib import Path
 
 
+def _sanitize_applescript_string(s: str) -> str:
+    """Sanitize a string for safe embedding in AppleScript double-quoted literals.
+
+    Escapes backslashes and double quotes to prevent injection.
+    Strips control characters that could break AppleScript parsing.
+    """
+    # Remove control characters (except space/tab/newline)
+    cleaned = "".join(c for c in s if c >= " " or c in "\t\n")
+    # Escape backslashes first, then double quotes
+    cleaned = cleaned.replace("\\", "\\\\").replace('"', '\\"')
+    return cleaned
+
+
 def _find_workspace_root() -> Path:
     """Walk up from script location to find workspace root (parent of 'skills/')."""
     env = os.environ.get("ANNOUNCER_WORKSPACE")
@@ -80,7 +93,7 @@ def convert_to_stereo_mp3(input_path: str, output_path: str) -> bool:
 
 def setup_airfoil(speakers: list[str], volume: float = 0.7) -> bool:
     """Set Airfoil source to System-Wide Audio, connect speakers, and set volume."""
-    speaker_list = '", "'.join(speakers)
+    speaker_list = '", "'.join(_sanitize_applescript_string(s) for s in speakers)
     script = f'''
     tell application "Airfoil"
         set current audio source to system source "System-Wide Audio"
@@ -102,7 +115,7 @@ def setup_airfoil(speakers: list[str], volume: float = 0.7) -> bool:
 
 def wait_for_connections(speakers: list[str], timeout: int = 30) -> bool:
     """Wait until all target speakers are connected and report which ones fail."""
-    speaker_list = '", "'.join(speakers)
+    speaker_list = '", "'.join(_sanitize_applescript_string(s) for s in speakers)
     
     # Script to get detailed connection status
     script = f'''
