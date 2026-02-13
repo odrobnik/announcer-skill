@@ -2,14 +2,14 @@
 name: announcer
 description: "Announce text throughout the house via AirPlay speakers using Airfoil + ElevenLabs TTS."
 summary: "House-wide TTS announcements via AirPlay speakers, Airfoil, and ElevenLabs."
-version: 1.1.2
+version: 1.1.3
 homepage: https://github.com/odrobnik/announcer-skill
 metadata:
   {
     "openclaw":
       {
         "emoji": "📢",
-        "requires": { "bins": ["python3", "ffmpeg"], "apps": ["Airfoil"], "env": ["ELEVENLABS_API_KEY"], "skills": ["elevenlabs"] },
+        "requires": { "bins": ["python3", "ffmpeg"], "apps": ["Airfoil"], "env": ["ELEVENLABS_API_KEY"], "skills": ["elevenlabs"], "platform": "macos" },
       },
   }
 ---
@@ -25,50 +25,9 @@ Play TTS announcements through AirPlay speakers via Airfoil and ElevenLabs.
 3. Play an optional chime (gong) followed by the announcement
 4. Disconnect speakers after playback
 
-## Requirements
+## Setup
 
-- **Airfoil** (Rogue Amoeba) — running on the host Mac
-- **ElevenLabs API key** — set `ELEVENLABS_API_KEY` env var
-- **ffmpeg** — for audio format conversion
-- **elevenlabs skill** — sibling skill for TTS generation
-
-## Configuration
-
-User config lives at `~/clawd/announcer/config.json`:
-
-```json
-{
-  "speakers": ["Living (2)", "Kitchen", "Office"],
-  "excluded": ["Computer"],
-  "elevenlabs": {
-    "voice_id": "your-voice-id",
-    "format": "opus_48000_192"
-  },
-  "audio": {
-    "output_format": "mp3",
-    "stereo": true,
-    "sample_rate": 48000,
-    "bitrate": "256k",
-    "chime_file": "gong_stereo.mp3"
-  },
-  "airfoil": {
-    "source": "System-Wide Audio",
-    "connection_timeout_seconds": 30,
-    "volume": 0.7
-  }
-}
-```
-
-### Config Fields
-
-| Field | Description |
-|-------|-------------|
-| `speakers` | AirPlay speaker names to connect |
-| `excluded` | Speaker names to never connect |
-| `elevenlabs.voice_id` | ElevenLabs voice to use |
-| `audio.chime_file` | Chime sound file in `assets/` (set `null` to disable) |
-| `airfoil.connection_timeout_seconds` | Time to wait for speakers to connect |
-| `airfoil.volume` | Speaker volume (0.0–1.0) |
+See [SETUP.md](SETUP.md) for prerequisites and setup instructions.
 
 ## Usage
 
