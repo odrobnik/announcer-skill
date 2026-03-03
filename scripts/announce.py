@@ -30,10 +30,17 @@ def _find_workspace_root() -> Path:
     if env:
         return Path(env)
     
-    # Prefer CWD if it looks like a workspace (handles symlinks correctly)
-    cwd = Path.cwd()
-    if (cwd / "skills").is_dir():
-        return cwd
+    # Use $PWD (preserves symlinks) instead of Path.cwd() (resolves them).
+    pwd_env = os.environ.get("PWD")
+    cwd = Path(pwd_env) if pwd_env else Path.cwd()
+    d = cwd
+    for _ in range(6):
+        if (d / "skills").is_dir() and d != d.parent:
+            return d
+        parent = d.parent
+        if parent == d:
+            break
+        d = parent
 
     d = Path(__file__).resolve().parent
     for _ in range(6):
