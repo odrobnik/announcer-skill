@@ -2,7 +2,7 @@
 name: announcer
 description: "Announce text throughout the house via AirPlay speakers using Airfoil + ElevenLabs TTS."
 summary: "House-wide TTS announcements via AirPlay speakers, Airfoil, and ElevenLabs."
-version: 1.2.2
+version: 1.2.3
 homepage: https://github.com/odrobnik/announcer-skill
 metadata:
   {
